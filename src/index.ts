@@ -7,7 +7,7 @@ import {
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const CONVEX_SITE = process.env.NOELCLAW_CONVEX_URL ?? "https://befitting-porcupine-276.convex.site";
+const CONVEX_SITE = process.env.NOELCLAW_CONVEX_URL ?? "https://valuable-fish-533.convex.site";
 
 async function callConvex(path: string, method: string, body?: unknown): Promise<any> {
   const url = `${CONVEX_SITE}${path}`;
@@ -300,10 +300,87 @@ const TOOLS: Tool[] = [
       required: [],
     },
   },
+  {
+    name: "connect_wallet",
+    description:
+      "Create or retrieve a Base mainnet DeFi wallet (Privy Server Wallet). Returns the wallet address. Run this before swap_tokens, send_token, deploy_token, or get_portfolio.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Your user ID" },
+      },
+      required: ["userId"],
+    },
+  },
+  {
+    name: "swap_tokens",
+    description:
+      "Swap tokens on Base mainnet via 0x Permit2. Supports ETH, USDC, USDT, DAI, WETH. Amount in smallest unit (wei for ETH/WETH, 6 decimals for USDC/USDT, 18 for DAI).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Your user ID" },
+        fromToken: { type: "string", description: "Token to sell: ETH, USDC, USDT, DAI, WETH" },
+        toToken: { type: "string", description: "Token to buy: ETH, USDC, USDT, DAI, WETH" },
+        amount: {
+          type: "string",
+          description: "Amount in smallest unit (e.g. '1000000' = 1 USDC, '1000000000000000000' = 1 ETH)",
+        },
+      },
+      required: ["userId", "fromToken", "toToken", "amount"],
+    },
+  },
+  {
+    name: "send_token",
+    description:
+      "Send ETH or ERC-20 tokens (USDC, USDT, DAI, WETH) to any address on Base mainnet.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Your user ID" },
+        token: { type: "string", description: "Token to send: ETH, USDC, USDT, DAI, WETH" },
+        toAddress: { type: "string", description: "Destination address (0x...)" },
+        amount: { type: "string", description: "Amount in smallest unit" },
+      },
+      required: ["userId", "token", "toAddress", "amount"],
+    },
+  },
+  {
+    name: "deploy_token",
+    description:
+      "Deploy a new memecoin on Base via Flaunch. Creates an ERC-20 with a Flaunch liquidity pool. Requires FLAUNCH_API_KEY to be configured.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Your user ID" },
+        name: { type: "string", description: "Full token name, e.g. 'Moon Cat Token'" },
+        symbol: { type: "string", description: "Token symbol, e.g. 'MCAT'" },
+        description: { type: "string", description: "Short description (optional)" },
+        imageUrl: { type: "string", description: "URL to token logo image (optional)" },
+        initialBuyEth: {
+          type: "string",
+          description: "Initial ETH to buy on deploy in wei (optional, e.g. '10000000000000000' = 0.01 ETH)",
+        },
+      },
+      required: ["userId", "name", "symbol"],
+    },
+  },
+  {
+    name: "get_portfolio",
+    description:
+      "Get the token balances and total USD value for a user's DeFi wallet on Base mainnet.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        userId: { type: "string", description: "Your user ID" },
+      },
+      required: ["userId"],
+    },
+  },
 ];
 
 const server = new Server(
-  { name: "noelclaw", version: "1.2.0" },
+  { name: "noelclaw", version: "1.3.1" },
   { capabilities: { tools: {} } }
 );
 
@@ -698,6 +775,100 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           `🤖 AI Review:`,
           data.aiReview ?? "No review",
         ];
+        return { content: [{ type: "text", text: lines.join("\n") }] };
+      }
+
+      case "connect_wallet": {
+        const a = args as { userId: string };
+        const data = await callConvex("/mcp/defi/connect", "POST", { userId: a.userId });
+        if (data.error) return { content: [{ type: "text", text: `Error: ${data.error}` }], isError: true };
+        return {
+          content: [{
+            type: "text",
+            text: [
+              data.existing ? `Wallet already exists:` : `✅ New DeFi wallet created!`,
+              `**Address:** \`${data.address}\``,
+              `Network: Base Mainnet`,
+              ``,
+              `Fund with ETH or USDC on Base, then use swap_tokens, send_token, or deploy_token.`,
+            ].join("\n"),
+          }],
+        };
+      }
+
+      case "swap_tokens": {
+        const a = args as { userId: string; fromToken: string; toToken: string; amount: string };
+        const data = await callConvex("/mcp/defi/swap", "POST", a);
+        if (data.error === "NO_WALLET") return { content: [{ type: "text", text: `No wallet found. Run connect_wallet first.` }], isError: true };
+        if (data.error) return { content: [{ type: "text", text: `Swap failed: ${data.error}` }], isError: true };
+        return {
+          content: [{
+            type: "text",
+            text: [
+              `✅ Swap executed!`,
+              `${a.fromToken.toUpperCase()} → ${a.toToken.toUpperCase()}`,
+              `Sold: ${a.amount} (smallest unit) | Bought: ${data.buyAmount ?? "?"}`,
+              `Tx Hash: \`${data.txHash}\``,
+              `https://basescan.org/tx/${data.txHash}`,
+            ].join("\n"),
+          }],
+        };
+      }
+
+      case "send_token": {
+        const a = args as { userId: string; token: string; toAddress: string; amount: string };
+        const data = await callConvex("/mcp/defi/send", "POST", a);
+        if (data.error === "NO_WALLET") return { content: [{ type: "text", text: `No wallet found. Run connect_wallet first.` }], isError: true };
+        if (data.error) return { content: [{ type: "text", text: `Send failed: ${data.error}` }], isError: true };
+        return {
+          content: [{
+            type: "text",
+            text: [
+              `✅ Transfer sent!`,
+              `${a.token.toUpperCase()} → \`${a.toAddress}\``,
+              `Amount: ${a.amount} (smallest unit)`,
+              `Tx Hash: \`${data.txHash}\``,
+              `https://basescan.org/tx/${data.txHash}`,
+            ].join("\n"),
+          }],
+        };
+      }
+
+      case "deploy_token": {
+        const a = args as { userId: string; name: string; symbol: string; description?: string; imageUrl?: string; initialBuyEth?: string };
+        const data = await callConvex("/mcp/defi/deploy", "POST", a);
+        if (data.error === "NO_WALLET") return { content: [{ type: "text", text: `No wallet found. Run connect_wallet first.` }], isError: true };
+        if (data.error) return { content: [{ type: "text", text: `Deploy failed: ${data.error}` }], isError: true };
+        return {
+          content: [{
+            type: "text",
+            text: [
+              `🚀 Token deployed on Base!`,
+              `**Name:** ${a.name} (${a.symbol.toUpperCase()})`,
+              `**Contract:** \`${data.contractAddress}\``,
+              `**Tx Hash:** \`${data.txHash}\``,
+              `Basescan: https://basescan.org/tx/${data.txHash}`,
+              `Flaunch: https://flaunch.gg/base/token/${data.contractAddress}`,
+            ].join("\n"),
+          }],
+        };
+      }
+
+      case "get_portfolio": {
+        const a = args as { userId: string };
+        const data = await callConvex(`/mcp/defi/portfolio?userId=${encodeURIComponent(a.userId)}`, "GET");
+        if (data.error === "NO_WALLET") return { content: [{ type: "text", text: `No wallet found. Run connect_wallet first.` }], isError: true };
+        if (data.error) return { content: [{ type: "text", text: `Portfolio error: ${data.error}` }], isError: true };
+        const lines = [
+          `**Portfolio — Base Mainnet**`,
+          `Address: \`${data.address}\``,
+          ``,
+          `**Balances**`,
+        ];
+        for (const b of (data.balances ?? [])) {
+          lines.push(`• ${b.token}: ${b.balance}${b.valueUsd ? ` (~$${Number(b.valueUsd).toFixed(2)})` : ""}`);
+        }
+        lines.push(``, `**Total Value:** ~$${Number(data.totalValueUsd ?? 0).toFixed(2)}`);
         return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
