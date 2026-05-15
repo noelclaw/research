@@ -142,84 +142,22 @@ const TOOLS: Tool[] = [
     },
   },
   {
-    name: "get_research_report",
-    description: "Get the latest research report for a specific token (e.g. 'ETH', 'SOL').",
-    inputSchema: {
-      type: "object",
-      properties: {
-        token: {
-          type: "string",
-          description: "Token symbol to get the report for, e.g. 'ETH'",
-        },
-      },
-      required: ["token"],
-    },
-  },
-  {
-    name: "get_research_status",
+    name: "research",
     description:
-      "Get the status of Noel's research shift: active job details (elapsed time, remaining time, report count) and the last 3 reports.",
+      "Research any crypto topic on demand — like Perplexity but for crypto. Ask about a token, protocol, market event, or trend. Noel searches the web and returns a structured analysis with overview, key findings, market impact, affected tokens, sentiment, and what to watch.",
     inputSchema: {
       type: "object",
       properties: {
+        query: {
+          type: "string",
+          description: "Topic to research, e.g. 'Ethereum ETF approval impact', 'What is happening with SOL?', 'Latest news on Base ecosystem'",
+        },
         userId: {
           type: "string",
-          description: "User ID to check research status for",
+          description: "Your user ID — results will be sent to your Telegram bot if configured",
         },
       },
-      required: [],
-    },
-  },
-  {
-    name: "run_research",
-    description:
-      "Trigger Noel's autonomous research cycle on demand. Returns structured findings with confidence scores.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        userId: {
-          type: "string",
-          description: "Optional user ID to associate research with",
-        },
-      },
-      required: [],
-    },
-  },
-  {
-    name: "start_research",
-    description:
-      "Start Noel's 8-hour autonomous research shift. Noel collects market data every 30 minutes, sends interim reports at 2.5h and 5h, and a final report at 8h — all via Telegram.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        userId: {
-          type: "string",
-          description: "User ID to associate the research shift with",
-        },
-        telegramChatId: {
-          type: "string",
-          description: "Telegram chat ID to send reports to (optional, uses default if not provided)",
-        },
-        token: {
-          type: "string",
-          description: "Specific token to focus on e.g. 'ETH', 'SOL' (optional)",
-        },
-      },
-      required: [],
-    },
-  },
-  {
-    name: "stop_research",
-    description: "Stop Noel's active research shift.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        userId: {
-          type: "string",
-          description: "User ID whose active shift should be stopped",
-        },
-      },
-      required: [],
+      required: ["query"],
     },
   },
   {
@@ -323,7 +261,7 @@ const TOOLS: Tool[] = [
 ];
 
 const server = new Server(
-  { name: "noelclaw", version: "1.4.0" },
+  { name: "noelclaw", version: "1.5.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -496,157 +434,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
-      case "get_research_report": {
-        const a = args as { token: string };
-        const data = await callConvex(
-          `/mcp/research/report?token=${encodeURIComponent(a.token)}`,
-          "GET"
-        );
-        if (!data || data.error) {
-          return { content: [{ type: "text", text: `No report found for ${a.token}` }] };
-        }
-        const r = data.result ?? {};
-        const lines: string[] = [
-          `**Latest Research Report — ${a.token.toUpperCase()}**`,
-          `Generated: ${data.generatedAt ? new Date(data.generatedAt).toUTCString() : "unknown"}`,
-          `Type: ${data.type ?? "unknown"} | Outlook: ${r.marketOutlook ?? "neutral"}`,
-          "",
-          r.shortSummary ?? "",
-        ];
-        if (r.fullAnalysis) {
-          lines.push("", "**Analysis:**", r.fullAnalysis.slice(0, 1000));
-        }
-        const impacts: any[] = r.impacts ?? [];
-        if (impacts.length) {
-          lines.push("", "**Key Signals:**");
-          for (const f of impacts.slice(0, 4)) {
-            const e = f.sentiment === "bullish" ? "🟢" : f.sentiment === "bearish" ? "🔴" : "🟡";
-            lines.push(`${e} ${f.title} — ${f.detail ?? ""}`);
-          }
-        }
-        return { content: [{ type: "text", text: lines.join("\n") }] };
-      }
-
-      case "get_research_status": {
-        const a = (args ?? {}) as { userId?: string };
-        const data = await callConvex(
-          `/mcp/research/status?userId=${encodeURIComponent(a.userId ?? "mcp-anonymous")}`,
-          "GET"
-        );
-        const lines: string[] = ["**Noel Research Status**", ""];
-
-        if (data.activeJob) {
-          const j = data.activeJob;
-          lines.push(`**Active Shift**`);
-          lines.push(`• Status: running`);
-          lines.push(`• Elapsed: ${j.elapsedMinutes} min`);
-          lines.push(`• Remaining: ${j.remainingMinutes} min`);
-          lines.push(`• Interim reports sent: ${j.interimReportsCount}/2`);
-          lines.push(`• Final report sent: ${j.finalReportSent ? "yes" : "no"}`);
-        } else {
-          lines.push(`**No active shift.** Use \`start_research\` to begin.`);
-        }
-
-        if (data.recentReports?.length) {
-          lines.push("", "**Recent Reports**");
-          for (const r of data.recentReports) {
-            const emoji = r.outlook === "bullish" ? "🟢" : r.outlook === "bearish" ? "🔴" : "🟡";
-            lines.push(`${emoji} [${r.type.toUpperCase()}] ${r.generatedAt}`);
-            if (r.summary) lines.push(`   ${r.summary}`);
-          }
-        }
-
-        return { content: [{ type: "text", text: lines.join("\n") }] };
-      }
-
-      case "run_research": {
-        const a = (args ?? {}) as { userId?: string };
-        const data = await callConvex("/mcp/research", "POST", {
-          userId: a.userId ?? "mcp-anonymous",
-        });
-
+      case "research": {
+        const a = args as { query: string; userId?: string };
+        const data = await callConvex("/mcp/research", "POST", { query: a.query });
         if (!data.success) {
           return { content: [{ type: "text", text: `Research failed: ${data.error ?? "unknown error"}` }] };
         }
-
-        const r = data.result;
-        const summary = r?.shortSummary ?? r?.summary ?? "No summary available";
-        const lines: string[] = [
-          `**Noel Research** — ${r?.generatedAt ?? new Date().toISOString()}`,
-          "",
-          `**Outlook:** ${r?.marketOutlook ?? "neutral"}`,
-          "",
-          `**Summary:** ${summary}`,
-        ];
-
-        if (r?.fullAnalysis && r.fullAnalysis !== summary) {
-          lines.push("", r.fullAnalysis);
+        let text = data.text ?? "No results returned.";
+        if (a.userId) {
+          const tgMsg = `🔍 Research: ${a.query}\n\n${text}`.slice(0, 4000) + "\n\n— via Noelclaw";
+          const notif = await notifyTelegram(a.userId, tgMsg);
+          if (!notif.sent && notif.reason === "no_config") text += TELEGRAM_SETUP_HINT;
+          else if (notif.sent) text += "\n\n✅ _Sent to your Telegram._";
         }
-
-        const impacts = r?.impacts ?? r?.findings ?? [];
-        if (impacts.length) {
-          lines.push("", "**Key Impacts:**");
-          for (const f of impacts) {
-            const label = f.title ?? `${f.token} (${f.symbol})`;
-            const detail = f.detail ?? f.rationale ?? "";
-            const conf = ((f.confidence ?? f.confidenceScore ?? 0) * 100).toFixed(0);
-            const emoji = f.sentiment === "bullish" ? "🟢" : f.sentiment === "bearish" ? "🔴" : "🟡";
-            lines.push(`${emoji} **${label}** _(${conf}% conf)_`);
-            if (detail) lines.push(`   ${detail}`);
-          }
-        }
-
-        return { content: [{ type: "text", text: lines.join("\n") }] };
-      }
-
-      case "start_research": {
-        const a = (args ?? {}) as { userId?: string; telegramChatId?: string; token?: string };
-        const data = await callConvex("/mcp/research/start", "POST", {
-          userId: a.userId ?? "mcp-anonymous",
-          telegramChatId: a.telegramChatId,
-          token: a.token,
-        });
-        if (!data.success) {
-          return { content: [{ type: "text", text: `Failed to start shift: ${data.error ?? "unknown error"}` }], isError: true };
-        }
-        const startedAt = data.startedAt ? new Date(data.startedAt).toUTCString() : "now";
-        const stopsAt = data.stopsAt ? new Date(data.stopsAt).toUTCString() : "in 8 hours";
-        const tokenLine = a.token ? `**Tracking:** ${a.token.toUpperCase()}` : `**Tracking:** whole market`;
-        return {
-          content: [{
-            type: "text",
-            text: [
-              `🚀 **Noel Research Shift Started**`,
-              ``,
-              `**Job ID:** ${data.jobId}`,
-              tokenLine,
-              `**Started:** ${startedAt}`,
-              `**Ends:** ${stopsAt}`,
-              ``,
-              `Noel will collect market data every 30 minutes.`,
-              `Interim reports sent via Telegram at 2.5h and 5h.`,
-              `Final report at 8h.`,
-            ].join("\n"),
-          }],
-        };
-      }
-
-      case "stop_research": {
-        const a = (args ?? {}) as { userId?: string };
-        const data = await callConvex("/mcp/research/stop", "POST", {
-          userId: a.userId ?? "mcp-anonymous",
-        });
-        if (!data.success) {
-          return { content: [{ type: "text", text: `Failed to stop shift: ${data.error ?? "unknown error"}` }], isError: true };
-        }
-        return {
-          content: [{
-            type: "text",
-            text: data.stopped > 0
-              ? `✅ Research shift stopped (${data.stopped} job${data.stopped > 1 ? "s" : ""} terminated).`
-              : `ℹ️ No active research shift found.`,
-          }],
-        };
+        return { content: [{ type: "text", text }] };
       }
 
       case "get_portfolio": {
