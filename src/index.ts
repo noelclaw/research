@@ -114,8 +114,8 @@ const TOOLS: Tool[] = [
     },
   },
   {
-    name: "get_whale_alerts",
-    description: "Get recent whale movement and smart money activity alerts for BTC and ETH.",
+    name: "get_smart_money_alerts",
+    description: "Get smart money and insider wallet movements for micro-cap tokens. Tracks early accumulation by alpha wallets on Base, Solana, and ETH.",
     inputSchema: {
       type: "object",
       properties: {
@@ -437,7 +437,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: lines.join("\n") }] };
       }
 
-      case "get_whale_alerts": {
+      case "get_smart_money_alerts": {
         const a = (args ?? {}) as { hours?: number };
         const hours = a.hours ?? 24;
         const data = await callConvex(`/whales/latest?hours=${hours}`, "GET");
