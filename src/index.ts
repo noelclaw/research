@@ -13,6 +13,11 @@ import * as path from "path";
 import * as crypto from "crypto";
 
 const CONVEX_SITE = process.env.NOELCLAW_CONVEX_URL ?? "https://valuable-fish-533.convex.site";
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
+const BASE_RPC = ALCHEMY_API_KEY
+  ? `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+  : "https://mainnet.base.org";
+const BASE_CHAIN_ID = 8453;
 
 const WALLET_DIR = path.join(os.homedir(), ".noelclaw");
 const WALLET_FILE = path.join(WALLET_DIR, "wallet.json");
@@ -51,6 +56,67 @@ async function signRequest(toolName: string): Promise<{ address: string; signatu
   const timestamp = Date.now().toString();
   const signature = await wallet.signMessage(`noelclaw:${toolName}:${timestamp}`);
   return { address: wallet.address, signature, timestamp };
+}
+
+async function rpcPost(method: string, params: unknown[]): Promise<any> {
+  const res = await fetch(BASE_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    signal: AbortSignal.timeout(15000),
+  });
+  const data = await res.json() as any;
+  if (data.error) throw new Error(`RPC ${method} failed: ${data.error.message}`);
+  return data.result;
+}
+
+async function getNonce(address: string): Promise<number> {
+  return parseInt(await rpcPost("eth_getTransactionCount", [address, "latest"]), 16);
+}
+
+async function getGasPrice(): Promise<bigint> {
+  return BigInt(await rpcPost("eth_gasPrice", []));
+}
+
+async function broadcastTx(signedTx: string): Promise<string> {
+  return rpcPost("eth_sendRawTransaction", [signedTx]);
+}
+
+async function signAndBroadcast(
+  wallet: ethers.Wallet | ethers.HDNodeWallet,
+  txData: {
+    to: string;
+    data: string;
+    value: string;
+    gas?: string;
+    gasPrice?: string;
+    permit2?: any;
+    issues?: any;
+  }
+): Promise<string> {
+  // Handle permit2 EIP-712 signature — append to calldata
+  let data = txData.data || "0x";
+  if (txData.permit2?.eip712) {
+    const eip712 = txData.permit2.eip712;
+    const { EIP712Domain: _d, ...typesWithout } = eip712.types ?? {};
+    const sig = await wallet.signTypedData(eip712.domain, typesWithout, eip712.message);
+    data = data + sig.replace("0x", "");
+  }
+
+  const [nonce, gasPrice] = await Promise.all([getNonce(wallet.address), getGasPrice()]);
+
+  const tx = {
+    to: txData.to,
+    data,
+    value: BigInt(txData.value || "0"),
+    gasLimit: BigInt(txData.gas || "200000"),
+    gasPrice: txData.gasPrice ? BigInt(txData.gasPrice) : gasPrice,
+    nonce,
+    chainId: BASE_CHAIN_ID,
+  };
+
+  const signedTx = await wallet.signTransaction(tx);
+  return broadcastTx(signedTx);
 }
 
 const PRIVATE_KEY_RESPONSE = {
@@ -274,7 +340,7 @@ const TOOLS: Tool[] = [
   {
     name: "swap_tokens",
     description:
-      "Swap tokens on Base mainnet via 0x Permit2. Supported: ETH, USDC, USDT, DAI, WETH. Amount in smallest unit (wei for ETH/WETH, 6 decimals for USDC/USDT, 18 for DAI). Auto-creates wallet on first use.",
+      "Swap tokens on Base mainnet via 0x Permit2. Supported: ETH, USDC, USDT, DAI, WETH. Amount is human-readable (e.g. '0.001' for 0.001 ETH). Signed and broadcast locally from your wallet.",
     inputSchema: {
       type: "object",
       properties: {
@@ -282,7 +348,7 @@ const TOOLS: Tool[] = [
         toToken: { type: "string", description: "Token to buy: ETH, USDC, USDT, DAI, WETH" },
         amount: {
           type: "string",
-          description: "Amount in smallest unit (e.g. '1000000' = 1 USDC, '1000000000000000000' = 1 ETH)",
+          description: "Human-readable amount (e.g. '0.001' for 0.001 ETH, '10' for 10 USDC)",
         },
       },
       required: ["fromToken", "toToken", "amount"],
@@ -290,13 +356,13 @@ const TOOLS: Tool[] = [
   },
   {
     name: "send_token",
-    description: "Send ETH or ERC-20 tokens (USDC, USDT, DAI, WETH) to any address on Base mainnet.",
+    description: "Send ETH or ERC-20 tokens (USDC, USDT, DAI, WETH) to any address on Base mainnet. Amount is human-readable. Signed and broadcast locally from your wallet.",
     inputSchema: {
       type: "object",
       properties: {
         token: { type: "string", description: "Token to send: ETH, USDC, USDT, DAI, WETH" },
         toAddress: { type: "string", description: "Destination address (0x...)" },
-        amount: { type: "string", description: "Amount in smallest unit" },
+        amount: { type: "string", description: "Human-readable amount (e.g. '0.01' for 0.01 ETH, '5' for 5 USDC)" },
       },
       required: ["token", "toAddress", "amount"],
     },
@@ -639,17 +705,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "swap_tokens": {
         const a = args as { fromToken: string; toToken: string; amount: string };
-        const data = await callConvex("/mcp/defi/swap", "POST", a, "swap_tokens");
-        if (data.error) return { content: [{ type: "text", text: `Swap failed: ${data.error}` }], isError: true };
+        const wallet = await getOrCreateWallet();
+        const result = await callConvex("/mcp/defi/swap", "POST", a, "swap_tokens");
+        if (!result.success) return { content: [{ type: "text", text: `Swap failed: ${result.error}` }], isError: true };
+        const txHash = await signAndBroadcast(wallet, result.quote);
+        const buyAmountHuman = (parseInt(result.quote.buyAmount) / 1e6).toFixed(4);
         return {
           content: [{
             type: "text",
             text: [
               `✅ Swap executed!`,
-              `${a.fromToken.toUpperCase()} → ${a.toToken.toUpperCase()}`,
-              `Sold: ${a.amount} (smallest unit) | Bought: ${data.buyAmount ?? "?"}`,
-              `Tx Hash: \`${data.txHash}\``,
-              `https://basescan.org/tx/${data.txHash}`,
+              `${a.amount} ${a.fromToken.toUpperCase()} → ${buyAmountHuman} ${result.quote.buyToken}`,
+              `Tx Hash: \`${txHash}\``,
+              `https://basescan.org/tx/${txHash}`,
             ].join("\n"),
           }],
         };
@@ -657,17 +725,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "send_token": {
         const a = args as { token: string; toAddress: string; amount: string };
-        const data = await callConvex("/mcp/defi/send", "POST", a, "send_token");
-        if (data.error) return { content: [{ type: "text", text: `Send failed: ${data.error}` }], isError: true };
+        const wallet = await getOrCreateWallet();
+        const result = await callConvex("/mcp/defi/send", "POST", a, "send_token");
+        if (!result.success) return { content: [{ type: "text", text: `Send failed: ${result.error}` }], isError: true };
+        const txHash = await signAndBroadcast(wallet, result.txData);
         return {
           content: [{
             type: "text",
             text: [
-              `✅ Transfer sent!`,
-              `${a.token.toUpperCase()} → \`${a.toAddress}\``,
-              `Amount: ${a.amount} (smallest unit)`,
-              `Tx Hash: \`${data.txHash}\``,
-              `https://basescan.org/tx/${data.txHash}`,
+              `✅ Sent!`,
+              `${a.amount} ${a.token.toUpperCase()} → \`${a.toAddress}\``,
+              `Tx Hash: \`${txHash}\``,
+              `https://basescan.org/tx/${txHash}`,
             ].join("\n"),
           }],
         };
