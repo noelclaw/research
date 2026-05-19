@@ -395,6 +395,16 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: "get_insight",
+    description:
+      "Get Noel's daily crypto + macro insight powered by Grok. Covers Bitcoin/ETH price action, macro events, trending narratives on X/Twitter, and one actionable takeaway. Fresh on-demand generation.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: "create_automation",
     description:
       "Create an automation in plain English. Supports DCA (buy X daily), price alerts, conditional buys/sells, and recurring market updates. Examples: 'Buy 50 USDC of ETH every day. Stop after spending 500 USDC', 'If ETH drops 5%, buy $100', 'Alert me when BTC dominance drops below 50%', 'Sell 20% of my ETH if it's up 3x'.",
@@ -738,6 +748,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               `Tx Hash: \`${txHash}\``,
               `https://basescan.org/tx/${txHash}`,
             ].join("\n"),
+          }],
+        };
+      }
+
+      case "get_insight": {
+        const result = await callConvex("/insights/now", "GET", null, "get_insight");
+        return {
+          content: [{
+            type: "text",
+            text: result.insight ?? result.error ?? "Failed to generate insight",
           }],
         };
       }
