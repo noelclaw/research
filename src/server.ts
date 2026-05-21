@@ -8,6 +8,7 @@ import { DEFI_TOOLS, handleDefiTool } from "./tools/defi.js";
 import { AUTOMATION_TOOLS, handleAutomationTool } from "./tools/automation.js";
 import { SWARM_TOOLS, handleSwarmTool } from "./tools/swarm.js";
 import { INSIGHT_TOOLS, handleInsightTool } from "./tools/insight.js";
+import { FRAMEWORK_TOOLS, handleFrameworkTool } from "./tools/framework.js";
 
 const PRIVATE_KEY_RESPONSE = {
   content: [{
@@ -28,6 +29,7 @@ const ALL_TOOLS = [
   ...AUTOMATION_TOOLS,
   ...SWARM_TOOLS,
   ...INSIGHT_TOOLS,
+  ...FRAMEWORK_TOOLS,
 ];
 
 export const server = new Server(
@@ -49,7 +51,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       await handleDefiTool(name, args) ??
       await handleAutomationTool(name, args) ??
       await handleSwarmTool(name, args) ??
-      await handleInsightTool(name, args);
+      await handleInsightTool(name, args) ??
+      await handleFrameworkTool(name, args);
 
     if (result) return result;
 
