@@ -274,7 +274,7 @@ No env vars required. Wallet auth is automatic.
 | Var | Default | Description |
 |-----|---------|-------------|
 | `ALCHEMY_API_KEY` | — | Faster/more reliable Base RPC for swaps and portfolio |
-| `NOELCLAW_CONVEX_URL` | `https://api.noelclaw.xyz` | Override for self-hosted deployment |
+| `NOELCLAW_CONVEX_URL` | `https://api.noelclaw.com` | Override for self-hosted deployment |
 
 ---
 
