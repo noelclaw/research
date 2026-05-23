@@ -30,15 +30,16 @@ function containsSensitiveRequest(args: unknown): boolean {
 }
 
 export const ALL_TOOLS = [
-  ...MARKET_TOOLS,       // 6 — market data, signals, whale alerts
-  ...NEWS_TOOLS,         // 2 — crypto news, manual signal gen
-  ...RESEARCH_TOOLS,     // 3 — research, insight, ask_noel
+  ...MARKET_TOOLS,       // 6 — market data, signals, whale alerts, recap
+  ...NEWS_TOOLS,         // 2 — crypto news digest, manual signal gen
+  ...RESEARCH_TOOLS,     // 1 — deep research
+  ...INSIGHT_TOOLS,      // 2 — get_insight, ask_noel
   ...DEFI_TOOLS,         // 6 — portfolio, swap, send, deploy, claim, mint
   ...AUTOMATION_TOOLS,   // 4 — create, list, pause, delete
   ...SWARM_TOOLS,        // 6 — start, stop, status, memory, scores
   ...FRAMEWORK_TOOLS,    // 6 — task packets, playbooks, sentinel, ledger
-  ...WALLET_TOOLS,       // 2 — wallet address, telegram setup
-  ...INSIGHT_TOOLS,      // 2 — get_insight, ask_noel (via insight route)
+  ...WALLET_TOOLS,       // 2 — wallet address, telegram connect
+  // total: 35
 ];
 
 export const server = new Server(
