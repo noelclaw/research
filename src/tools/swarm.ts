@@ -78,11 +78,10 @@ export async function handleSwarmTool(name: string, args: unknown): Promise<Tool
       if (!parsed.success) return { content: [{ type: "text", text: `Invalid input: config ${parsed.error.issues[0].message}` }], isError: true };
       const data = await callConvex("/swarm/start", "POST", { config: parsed.data.config }, "start_swarm");
       if (!data.success) return { content: [{ type: "text", text: `Failed: ${data.error}` }], isError: true };
-      const agents: string[] = data.activeAgents ?? [];
       return {
         content: [{
           type: "text",
-          text: [`🤖 **Swarm Started**`, `Status: ${data.status}`, `Active agents (${agents.length}): ${agents.join(", ")}`, ``, `Use \`get_swarm_status\` to monitor, \`stop_swarm\` to stop.`].join("\n"),
+          text: [`🤖 **Swarm Started**`, `Session ID: ${data.sessionId}`, `Started at: ${data.startedAt}`, ``, `Use \`get_swarm_status\` to monitor, \`stop_swarm\` to stop.`].join("\n"),
         }],
       };
     }
@@ -96,12 +95,12 @@ export async function handleSwarmTool(name: string, args: unknown): Promise<Tool
     case "get_swarm_status": {
       const data = await callConvex("/swarm/status", "GET", undefined, "get_swarm_status");
       if (data.error) return { content: [{ type: "text", text: `Error: ${data.error}` }], isError: true };
-      const job = data.job;
+      const session = data.session;
       const memory: any[] = data.memory ?? [];
       const scores: any[] = data.scores ?? [];
       const lines: string[] = [
         `🤖 **Swarm Status**`,
-        job ? `Status: ${job.status} | Agents: ${(job.activeAgents ?? []).join(", ")}` : `No active swarm.`,
+        data.active && session ? `Status: active | Session: ${session.id}` : `No active swarm.`,
         ``,
       ];
       if (memory.length > 0) {
@@ -129,7 +128,7 @@ export async function handleSwarmTool(name: string, args: unknown): Promise<Tool
     case "get_swarm_memory": {
       const parsed = GetMemorySchema.safeParse(args);
       if (!parsed.success) return { content: [{ type: "text", text: `Invalid input: key ${parsed.error.issues[0].message}` }], isError: true };
-      const data = await callConvex(`/swarm/memory?key=${encodeURIComponent(parsed.data.key)}`, "GET", undefined, "get_swarm_memory");
+      const data = await callConvex(`/swarm/memory/read?key=${encodeURIComponent(parsed.data.key)}`, "GET", undefined, "get_swarm_memory");
       if (data.error) return { content: [{ type: "text", text: `Error: ${data.error}` }], isError: true };
       if (data.value === null || data.value === undefined) return { content: [{ type: "text", text: `No value found for key: ${parsed.data.key}` }] };
       return { content: [{ type: "text", text: `**${parsed.data.key}**: ${data.value}` }] };

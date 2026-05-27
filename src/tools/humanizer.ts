@@ -99,7 +99,7 @@ export async function handleHumanizerTool(name: string, args: unknown): Promise<
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "MiniMax-Text-01",
+        model: "MiniMax-M2.7",
         messages: [
           { role: "system", content: HUMANIZER_SYSTEM },
           { role: "user", content: userMsg },
@@ -116,7 +116,8 @@ export async function handleHumanizerTool(name: string, args: unknown): Promise<
     }
 
     const data: any = await res.json();
-    const output = data?.choices?.[0]?.message?.content?.trim();
+    const raw = data?.choices?.[0]?.message?.content ?? "";
+    const output = raw.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     if (!output) return { content: [{ type: "text", text: "Empty response from model" }], isError: true };
 
     return { content: [{ type: "text", text: output }] };
