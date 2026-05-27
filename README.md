@@ -5,7 +5,7 @@
 Noelclaw as an MCP skill â€” persistent memory, multi-agent coordination, scenario simulation, DeFi execution, and Sentinel-gated playbooks. Works with Claude, Cursor, Hermes, Windsurf, and any MCP-compatible client.
 
 ```bash
-npx @noelclaw/mcp@latest
+npx @noelclaw/mcp
 ```
 
 ---
@@ -14,12 +14,12 @@ npx @noelclaw/mcp@latest
 
 ### Claude Code
 ```bash
-claude mcp add noelclaw -- npx @noelclaw/mcp@latest
+claude mcp add noelclaw -- npx @noelclaw/mcp
 ```
 
 Set your API key:
 ```bash
-claude mcp add noelclaw -e NOELCLAW_API_KEY=noel_... -- npx @noelclaw/mcp@latest
+claude mcp add noelclaw -e NOELCLAW_API_KEY=noel_... -- npx @noelclaw/mcp
 ```
 
 ### Claude Desktop
@@ -30,7 +30,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or 
   "mcpServers": {
     "noelclaw": {
       "command": "npx",
-      "args": ["@noelclaw/mcp@latest"],
+      "args": ["@noelclaw/mcp"],
       "env": {
         "NOELCLAW_API_KEY": "noel_..."
       }
@@ -45,7 +45,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or 
   "mcpServers": {
     "noelclaw": {
       "command": "npx",
-      "args": ["@noelclaw/mcp@latest"],
+      "args": ["@noelclaw/mcp"],
       "env": {
         "NOELCLAW_API_KEY": "noel_..."
       }
@@ -60,7 +60,7 @@ mcp_servers:
   noelclaw:
     command: npx
     args:
-      - "@noelclaw/mcp@latest"
+      - "@noelclaw/mcp"
     env:
       NOELCLAW_API_KEY: "noel_..."
 ```
