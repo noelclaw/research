@@ -13,6 +13,8 @@ import { WALLET_TOOLS, handleWalletTool } from "./tools/wallet.js";
 import { NEWS_TOOLS, handleNewsTool } from "./tools/news.js";
 import { VAULT_TOOLS, handleVaultTool } from "./tools/vault.js";
 import { TWITTER_TOOLS, handleTwitterTool } from "./tools/twitter.js";
+import { MIROSHARK_TOOLS, handleMirosharkTool } from "./tools/miroshark.js";
+import { HUMANIZER_TOOLS, handleHumanizerTool } from "./tools/humanizer.js";
 
 const PRIVATE_KEY_RESPONSE = {
   content: [{
@@ -43,7 +45,9 @@ export const ALL_TOOLS = [
   ...VAULT_TOOLS,        // 7 — save, read, list, search, history, diff, export
   ...WALLET_TOOLS,       // 2 — wallet address, telegram connect
   ...TWITTER_TOOLS,      // 1 — post tweet
-  // total: 43
+  ...MIROSHARK_TOOLS,    // 2 — simulate, status
+  ...HUMANIZER_TOOLS,    // 1 — humanize_text
+  // total: 46
 ];
 
 export const server = new Server(
@@ -70,7 +74,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       await handleVaultTool(name, args) ??
       await handleWalletTool(name, args) ??
       await handleInsightTool(name, args) ??
-      await handleTwitterTool(name, args);
+      await handleTwitterTool(name, args) ??
+      await handleMirosharkTool(name, args) ??
+      await handleHumanizerTool(name, args);
 
     if (result) return result;
 
