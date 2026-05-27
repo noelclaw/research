@@ -136,7 +136,7 @@ export async function handleMirosharkTool(name: string, args: unknown): Promise<
       if (!simId) throw new Error("No simulation_id in create response");
 
       // Step 6: kick off agent preparation (async — don't block)
-      const prepared = await miroJson("/miroshark/api/simulation/prepare", "POST", { simulation_id: simId });
+      const prepared = await miroJson("/miroshark/api/simulation/prepare", "POST", { simulation_id: simId, parallel_profile_count: 10 });
       const prepTaskId: string | undefined = prepared.task_id;
 
       return {
