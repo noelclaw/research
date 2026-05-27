@@ -1,11 +1,11 @@
-# @noelclaw/research
+﻿# @noelclaw/mcp
 
-[![npm version](https://img.shields.io/npm/v/@noelclaw/research.svg)](https://www.npmjs.com/package/@noelclaw/research)
+[![npm version](https://img.shields.io/npm/v/@noelclaw/mcp.svg)](https://www.npmjs.com/package/@noelclaw/mcp)
 
-Noelclaw as an MCP skill — persistent memory, multi-agent coordination, scenario simulation, DeFi execution, and Sentinel-gated playbooks. Works with Claude, Cursor, Hermes, Windsurf, and any MCP-compatible client.
+Noelclaw as an MCP skill â€” persistent memory, multi-agent coordination, scenario simulation, DeFi execution, and Sentinel-gated playbooks. Works with Claude, Cursor, Hermes, Windsurf, and any MCP-compatible client.
 
 ```bash
-npx @noelclaw/research@latest
+npx @noelclaw/mcp@latest
 ```
 
 ---
@@ -14,12 +14,12 @@ npx @noelclaw/research@latest
 
 ### Claude Code
 ```bash
-claude mcp add noelclaw -- npx @noelclaw/research@latest
+claude mcp add noelclaw -- npx @noelclaw/mcp@latest
 ```
 
 Set your API key:
 ```bash
-claude mcp add noelclaw -e NOELCLAW_API_KEY=noel_... -- npx @noelclaw/research@latest
+claude mcp add noelclaw -e NOELCLAW_API_KEY=noel_... -- npx @noelclaw/mcp@latest
 ```
 
 ### Claude Desktop
@@ -30,7 +30,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or 
   "mcpServers": {
     "noelclaw": {
       "command": "npx",
-      "args": ["@noelclaw/research@latest"],
+      "args": ["@noelclaw/mcp@latest"],
       "env": {
         "NOELCLAW_API_KEY": "noel_..."
       }
@@ -45,7 +45,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (Mac) or 
   "mcpServers": {
     "noelclaw": {
       "command": "npx",
-      "args": ["@noelclaw/research@latest"],
+      "args": ["@noelclaw/mcp@latest"],
       "env": {
         "NOELCLAW_API_KEY": "noel_..."
       }
@@ -60,7 +60,7 @@ mcp_servers:
   noelclaw:
     command: npx
     args:
-      - "@noelclaw/research@latest"
+      - "@noelclaw/mcp@latest"
     env:
       NOELCLAW_API_KEY: "noel_..."
 ```
@@ -69,11 +69,11 @@ mcp_servers:
 
 ## Authentication
 
-Get a key instantly — no signup:
+Get a key instantly â€” no signup:
 
 ```bash
 curl -X POST https://api.noelclaw.com/auth/key
-# → { "apiKey": "noel_..." }
+# â†’ { "apiKey": "noel_..." }
 ```
 
 Set `NOELCLAW_API_KEY` in your MCP config. That's it.
@@ -88,7 +88,7 @@ Set `NOELCLAW_API_KEY` in your MCP config. That's it.
 |------|-------------|
 | `research` | Deep research via Bankr (real-time). Returns overview, key findings, market impact, sentiment |
 | `ask_noel` | Ask Noel AI for analysis, trade ideas, and research |
-| `humanize_text` | Remove AI tells from text — makes output sound natural and human-written |
+| `humanize_text` | Remove AI tells from text â€” makes output sound natural and human-written |
 
 ### Noel-Vault
 
@@ -96,7 +96,7 @@ Set `NOELCLAW_API_KEY` in your MCP config. That's it.
 
 | Tool | Description |
 |------|-------------|
-| `vault_save` | Save any content — research, execution logs, workflows, prompts, files |
+| `vault_save` | Save any content â€” research, execution logs, workflows, prompts, files |
 | `vault_read` | Read an entry by key |
 | `vault_list` | List all entries with type, title, version, last updated |
 | `vault_search` | Full-text search across all content |
@@ -114,21 +114,21 @@ Set `NOELCLAW_API_KEY` in your MCP config. That's it.
 | `stop_swarm` | Stop the active session |
 | `get_swarm_status` | Session state, memory snapshot, execution scores |
 | `write_swarm_memory` | Write a key-value entry with optional TTL |
-| `get_swarm_memory` | Read by key — returns value + freshness metadata |
+| `get_swarm_memory` | Read by key â€” returns value + freshness metadata |
 | `get_execution_scores` | Per-agent, per-skill scores |
 
 ### MiroShark
 
-> Scenario simulation engine — drop in any scenario and get back strategic insights from a network of AI agents reacting hour by hour. Requires `MIROSHARK_URL` + `MIROSHARK_ADMIN_TOKEN`.
+> Scenario simulation engine â€” drop in any scenario and get back strategic insights from a network of AI agents reacting hour by hour. Requires `MIROSHARK_URL` + `MIROSHARK_ADMIN_TOKEN`.
 
 | Tool | Description |
 |------|-------------|
 | `miroshark_simulate` | Run a multi-agent simulation from a plain-English scenario. Returns a simulation ID |
-| `miroshark_status` | Poll simulation results by ID — surfaces insights and consensus when complete |
+| `miroshark_status` | Poll simulation results by ID â€” surfaces insights and consensus when complete |
 
 ### Wallet & DeFi `beta`
 
-> On-chain operations on Base mainnet. Transactions are built for client-side signing — no private key ever leaves your machine.
+> On-chain operations on Base mainnet. Transactions are built for client-side signing â€” no private key ever leaves your machine.
 
 | Tool | Description |
 |------|-------------|
@@ -141,21 +141,21 @@ Set `NOELCLAW_API_KEY` in your MCP config. That's it.
 
 | Tool | Description |
 |------|-------------|
-| `create_automation` | Create an automation in plain English — DCA, price alerts, conditional buys/sells |
+| `create_automation` | Create an automation in plain English â€” DCA, price alerts, conditional buys/sells |
 | `list_automations` | List all automations with status and next scheduled run |
 | `pause_automation` | Pause or resume an automation |
 | `delete_automation` | Permanently delete an automation |
 
 ### Noel Framework `beta`
 
-> Sentinel-gated agent execution. Define what your AI can and can't do — before it runs. Every action checked against 5 mechanical rules before execution.
+> Sentinel-gated agent execution. Define what your AI can and can't do â€” before it runs. Every action checked against 5 mechanical rules before execution.
 
 | Tool | Description |
 |------|-------------|
 | `create_task_packet` | Convert plain-English intent into a structured task scope with permissions and constraints |
 | `list_task_packets` | List all task packets |
 | `list_playbooks` | List available playbooks |
-| `run_playbook` | Execute a Sentinel-gated playbook — halts if any step is blocked |
+| `run_playbook` | Execute a Sentinel-gated playbook â€” halts if any step is blocked |
 | `get_noel_ledger` | Full audit trail of every Sentinel decision |
 | `get_sentinel_rules` | Exact rules per agent role |
 
@@ -173,7 +173,7 @@ Set `NOELCLAW_API_KEY` in your MCP config. That's it.
 
 | Var | Description |
 |-----|-------------|
-| `NOELCLAW_API_KEY` | Your API key (`noel_...`) — get one at `POST https://api.noelclaw.com/auth/key` |
+| `NOELCLAW_API_KEY` | Your API key (`noel_...`) â€” get one at `POST https://api.noelclaw.com/auth/key` |
 
 ### MiroShark (optional)
 
@@ -186,7 +186,7 @@ Set `NOELCLAW_API_KEY` in your MCP config. That's it.
 
 | Var | Used for |
 |-----|---------|
-| `BANKR_API_KEY` | Bankr Agent — research, DeFi |
+| `BANKR_API_KEY` | Bankr Agent â€” research, DeFi |
 | `TELEGRAM_BOT_TOKEN` | Your own Telegram bot |
 | `TELEGRAM_CHAT_ID` | Your Telegram chat ID |
 | `ALCHEMY_API_KEY` | Faster Base RPC for swaps and portfolio |
@@ -233,14 +233,14 @@ get_noel_ledger
 | Error | Fix |
 |-------|-----|
 | Tools not appearing | Restart your MCP client after adding the config |
-| `401 Unauthorized` | Check `NOELCLAW_API_KEY` is set — get one at `POST https://api.noelclaw.com/auth/key` |
+| `401 Unauthorized` | Check `NOELCLAW_API_KEY` is set â€” get one at `POST https://api.noelclaw.com/auth/key` |
 | `miroshark_simulate` error | Set `MIROSHARK_URL` and `MIROSHARK_ADMIN_TOKEN` |
-| Server starts but no response | Expected — server waits for MCP stdin, not HTTP |
+| Server starts but no response | Expected â€” server waits for MCP stdin, not HTTP |
 
 ---
 
 ## Links
 
-- npm: [npmjs.com/package/@noelclaw/research](https://npmjs.com/package/@noelclaw/research)
-- GitHub: [github.com/noelclaw/research](https://github.com/noelclaw/research)
+- npm: [npmjs.com/package/@noelclaw/mcp](https://npmjs.com/package/@noelclaw/mcp)
+- GitHub: [github.com/noelclaw/research](https://github.com/noelclaw/mcp)
 - Platform: [noelclaw.com](https://noelclaw.com)
